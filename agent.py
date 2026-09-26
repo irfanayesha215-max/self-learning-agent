@@ -1,11 +1,13 @@
 from mem0 import Memory
 import ollama
 
+MODEL = "qwen2.5:1.5b"  # bumped up from 0.5b for reliable structured extraction
+
 config = {
     "vector_store": {
         "provider": "qdrant",
         "config": {
-            "collection_name": "agent_memory",  # separate from your test collection
+            "collection_name": "agent_memory",
             "path": "./qdrant_data",
             "embedding_model_dims": 768,
         },
@@ -13,7 +15,7 @@ config = {
     "llm": {
         "provider": "ollama",
         "config": {
-            "model": "qwen2.5:0.5b",
+            "model": MODEL,
             "ollama_base_url": "http://localhost:11434",
         },
     },
@@ -32,7 +34,6 @@ USER_ID = "ayesha"
 
 
 def chat(user_message: str) -> str:
-    # 1. Search memory for anything relevant to this message
     hits = m.search(user_message, filters={"user_id": USER_ID}, limit=5)
     relevant_facts = [h["memory"] for h in hits.get("results", [])]
 
@@ -44,9 +45,8 @@ Known facts about the user:
 
 Answer briefly and naturally. Use the facts above only if relevant."""
 
-    # 2. Ask the local model for a reply
     response = ollama.chat(
-        model="qwen2.5:0.5b",
+        model=MODEL,
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_message},
@@ -54,7 +54,6 @@ Answer briefly and naturally. Use the facts above only if relevant."""
     )
     reply = response["message"]["content"]
 
-    # 3. Save this exchange back to memory (mem0 extracts new facts automatically)
     m.add(
         [
             {"role": "user", "content": user_message},
